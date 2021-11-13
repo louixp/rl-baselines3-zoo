@@ -1,3 +1,4 @@
+import pdb
 import argparse
 import glob
 import importlib
@@ -59,6 +60,12 @@ def main():  # noqa: C901
     )
     parser.add_argument(
         "--env-kwargs", type=str, nargs="+", action=StoreDict, help="Optional keyword argument to pass to the env constructor"
+    )
+    parser.add_argument(
+        "--save-replay-buffer",
+        action="store_true",
+        default=False,
+        help="Create and save the replay buffer."
     )
     args = parser.parse_args()
 
@@ -176,6 +183,10 @@ def main():  # noqa: C901
         }
 
     model = ALGOS[algo].load(model_path, env=env, custom_objects=custom_objects, **kwargs)
+    
+    if args.save_replay_buffer:
+        pass
+    pdb.set_trace()
 
     obs = env.reset()
 
