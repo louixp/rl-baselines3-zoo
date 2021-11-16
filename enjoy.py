@@ -3,6 +3,7 @@ import glob
 import importlib
 import os
 import sys
+import pickle
 
 import numpy as np
 import torch as th
@@ -189,10 +190,13 @@ def main():  # noqa: C901
     ep_len = 0
     # For HER, monitor success rate
     successes = []
+    buffer = []
     try:
         for _ in range(args.n_timesteps):
             action, state = model.predict(obs, state=state, deterministic=deterministic)
-            obs, reward, done, infos = env.step(action)
+            prev_obs, obs, reward, done, infos = obs, *env.step(action)
+            buffer.append((prev_obs, action))
+
             if not args.no_render:
                 env.render("human")
 
@@ -243,6 +247,8 @@ def main():  # noqa: C901
 
     env.close()
 
-
+    with open("demonstration.pkl", "wb") as fp:
+        pickle.dump(buffer, fp)
+    
 if __name__ == "__main__":
     main()
