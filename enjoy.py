@@ -1,3 +1,4 @@
+import pdb
 import argparse
 import glob
 import importlib
@@ -195,7 +196,19 @@ def main():  # noqa: C901
         for _ in range(args.n_timesteps):
             action, state = model.predict(obs, state=state, deterministic=deterministic)
             prev_obs, obs, reward, done, infos = obs, *env.step(action)
-            buffer.append((prev_obs, action))
+
+            panda_env = env.envs[0].env.env.env
+            body_name = panda_env.robot.body_name
+            joint_angle = [
+                    panda_env.sim.get_joint_angle(body_name, i)
+                    for i in range(7)]
+            joint_velocity = [
+                    panda_env.sim.physics_client.getJointState(
+                        panda_env.sim._bodies_idx[body_name], i)[1]
+                    for i in range(7)]
+
+            # TODO: Double check whether we should reset observation after done.
+            buffer.append((prev_obs, action, joint_angle, joint_velocity))
 
             if not args.no_render:
                 env.render("human")
