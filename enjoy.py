@@ -191,7 +191,7 @@ def main():  # noqa: C901
     ep_len = 0
     # For HER, monitor success rate
     successes = []
-    buffer = []
+    buffer, episode_buffer = [], []
     try:
         for _ in range(args.n_timesteps):
             action, state = model.predict(obs, state=state, deterministic=deterministic)
@@ -208,7 +208,8 @@ def main():  # noqa: C901
                     for i in range(7)]
 
             # TODO: Double check whether we should reset observation after done.
-            buffer.append((prev_obs, action, joint_angle, joint_velocity))
+            episode_buffer.append(
+                    (prev_obs, action, joint_angle, joint_velocity))
 
             if not args.no_render:
                 env.render("human")
@@ -239,11 +240,14 @@ def main():  # noqa: C901
                 # Reset also when the goal is achieved when using HER
                 if done and infos[0].get("is_success") is not None:
                     if args.verbose > 1:
-                        print("Success?", infos[0].get("is_success", False))
+                        print("Success?", infos[0].get("is_success"))
 
                     if infos[0].get("is_success") is not None:
                         successes.append(infos[0].get("is_success", False))
                         episode_reward, ep_len = 0.0, 0
+                        buffer.append(episode_buffer)
+                        episode_buffer = []
+
 
     except KeyboardInterrupt:
         pass
@@ -261,7 +265,11 @@ def main():  # noqa: C901
     env.close()
 
     with open("demonstration.pkl", "wb") as fp:
-        pickle.dump(buffer, fp)
+        pickle.dump({
+            "episodes": buffer,
+            "rewards": episode_rewards,
+            "successes": successes
+            }, fp)
     
 if __name__ == "__main__":
     main()
