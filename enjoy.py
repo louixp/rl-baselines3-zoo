@@ -195,10 +195,23 @@ def main():  # noqa: C901
     try:
         for _ in range(args.n_timesteps):
             action, state = model.predict(obs, state=state, deterministic=deterministic)
+            
+            # Reverse engineer a 7dof action
+            # The following block is copied from panda_gym/envs/robots/panda.py
+            panda_env = env.envs[0].env.env.env
+            robot = panda_env.robot
+            body_name = robot.body_name
+            action = np.clip(action, robot.action_space.low, robot.action_space.high)
+            ee_ctrl = action[0][:3] * 0.05  # limit maximum change in position
+            ee_position = robot.get_ee_position()
+            target_ee_position = ee_position + ee_ctrl
+            target_ee_position[2] = max(0, target_ee_position[2])
+            target_angles = robot._inverse_kinematics(position=target_ee_position, orientation=[1, 0, 0, 0])
+            current_arm_joint_angles = np.array([robot.sim.get_joint_angle(body_name, i) for i in range(7)])
+            action_7dof = (target_angles[:7] - current_arm_joint_angles) * 20
+            
             prev_obs, obs, reward, done, infos = obs, *env.step(action)
 
-            panda_env = env.envs[0].env.env.env
-            body_name = panda_env.robot.body_name
             joint_angle = [
                     panda_env.sim.get_joint_angle(body_name, i)
                     for i in range(7)]
@@ -207,9 +220,11 @@ def main():  # noqa: C901
                         panda_env.sim._bodies_idx[body_name], i)[1]
                     for i in range(7)]
 
+
+
             # TODO: Double check whether we should reset observation after done.
             episode_buffer.append(
-                    (prev_obs, action, joint_angle, joint_velocity))
+                    (prev_obs, action, joint_angle, joint_velocity, action_7dof))
 
             if not args.no_render:
                 env.render("human")
