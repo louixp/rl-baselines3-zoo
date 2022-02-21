@@ -209,8 +209,6 @@ def main():  # noqa: C901
             target_angles = robot._inverse_kinematics(position=target_ee_position, orientation=[1, 0, 0, 0])
             current_arm_joint_angles = np.array([robot.sim.get_joint_angle(body_name, i) for i in range(7)])
             action_7dof = (target_angles[:7] - current_arm_joint_angles) * 20
-            
-            prev_obs, obs, reward, done, infos = obs, *env.step(action)
 
             joint_angle = [
                     panda_env.sim.get_joint_angle(body_name, i)
@@ -220,7 +218,7 @@ def main():  # noqa: C901
                         panda_env.sim._bodies_idx[body_name], i)[1]
                     for i in range(7)]
 
-
+            prev_obs, obs, reward, done, infos = obs, *env.step(action)
 
             # TODO: Double check whether we should reset observation after done.
             episode_buffer.append(
